@@ -236,7 +236,10 @@
     }
 
     restart() {
-      this.start();
+      this.reset();
+      this.isStarted = true;
+      this.seedBottomBlocksForLevel(this.level);
+      this.spawnPiece();
     }
 
     togglePause() {
@@ -736,6 +739,7 @@
       this.drawDropPreview();
       this.drawActivePiece();
       this.drawShatterParticles();
+      this.drawBoardHud();
 
       ctx.restore();
       this.drawNextPiece();
@@ -915,6 +919,50 @@
         this.ctx.fillRect(-size / 2, -size / 2, size, Math.max(1, size * 0.28));
         this.ctx.restore();
       }
+    }
+
+    drawBoardHud() {
+      if (!this.game.isStarted || this.game.isGameOver) {
+        return;
+      }
+
+      const progress = Math.max(0, Math.min(1, this.game.pieceCountdownMs / PIECE_PREP_MS));
+      const seconds = (this.game.pieceCountdownMs / 1000).toFixed(1);
+      const warning = this.game.canControl() && this.game.pieceCountdownMs <= 5000;
+
+      const panelX = this.cellSize * 0.35;
+      const panelY = this.cellSize * 0.28;
+      const panelW = this.cellSize * 4.9;
+      const panelH = this.cellSize * 1.08;
+      const radius = Math.max(5, this.cellSize * 0.22);
+
+      this.ctx.save();
+      this.roundRect(panelX, panelY, panelW, panelH, radius);
+      this.ctx.fillStyle = warning ? "rgba(150,60,75,0.68)" : "rgba(34,57,114,0.62)";
+      this.ctx.fill();
+
+      const barX = panelX + this.cellSize * 0.22;
+      const barY = panelY + this.cellSize * 0.62;
+      const barW = panelW - this.cellSize * 0.44;
+      const barH = Math.max(6, this.cellSize * 0.2);
+
+      this.roundRect(barX, barY, barW, barH, barH / 2);
+      this.ctx.fillStyle = "rgba(255,255,255,0.2)";
+      this.ctx.fill();
+
+      const fillW = barW * progress;
+      if (fillW > 0) {
+        this.roundRect(barX, barY, fillW, barH, barH / 2);
+        this.ctx.fillStyle = warning ? "rgba(255,180,190,0.95)" : "rgba(182,233,255,0.95)";
+        this.ctx.fill();
+      }
+
+      this.ctx.fillStyle = "#ffffff";
+      this.ctx.font = `600 ${Math.max(12, this.cellSize * 0.33)}px "Segoe UI", "Microsoft YaHei", sans-serif`;
+      this.ctx.textBaseline = "middle";
+      this.ctx.fillText(`计时 ${this.game.canControl() ? `${seconds}s` : "--"}`, panelX + this.cellSize * 0.22, panelY + this.cellSize * 0.35);
+
+      this.ctx.restore();
     }
 
     drawBlock(gridX, gridY, color, alpha = 1, glow = 1) {
@@ -1271,7 +1319,6 @@
   const scoreEl = document.getElementById("score");
   const linesEl = document.getElementById("lines");
   const levelEl = document.getElementById("level");
-  const timerEl = document.getElementById("timer");
   const stateLabelEl = document.getElementById("stateLabel");
   const statusOverlay = document.getElementById("statusOverlay");
 
@@ -1405,21 +1452,19 @@
     if (game.isDropping) {
       return "下落中";
     }
-    const seconds = (game.pieceCountdownMs / 1000).toFixed(1);
-    return `预摆中（${seconds}s）`;
+    return "预摆中";
   }
 
   function updateUI() {
     scoreEl.textContent = String(game.score);
     linesEl.textContent = String(game.lines);
     levelEl.textContent = String(game.level);
-    if (timerEl) {
-      timerEl.textContent = game.canControl() ? `${(game.pieceCountdownMs / 1000).toFixed(1)}s` : "--";
-    }
     stateLabelEl.textContent = resolveStateLabel();
 
     pauseBtn.disabled = !game.isStarted || game.isGameOver;
+    pauseBtn.textContent = game.isPaused ? "继续" : "暂停";
     dropBtn.disabled = !game.canControl();
+    startBtn.disabled = game.isStarted && !game.isGameOver;
     stageSelect.disabled = game.isStarted && !game.isGameOver;
     updateOverlay();
   }
