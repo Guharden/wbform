@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>俄罗斯方块 · 悬空预摆版</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <section class="board-panel">
+        <div class="board-wrap">
+          <canvas id="gameCanvas" aria-label="俄罗斯方块游戏区"></canvas>
+          <div id="statusOverlay" class="status-overlay hidden"></div>
+        </div>
+      </section>
+
+      <aside class="side-panel">
+        <h1>俄罗斯方块</h1>
+        <p class="subtitle">悬空预摆 · 点击掉落</p>
+
+        <div class="card next-card">
+          <h2>下一方块</h2>
+          <canvas id="nextCanvas" width="120" height="120" aria-label="下一方块预览"></canvas>
+        </div>
+
+        <div class="card stats">
+          <h2>游戏信息</h2>
+          <div class="stat-row"><span>分数</span><strong id="score">0</strong></div>
+          <div class="stat-row"><span>消除行数</span><strong id="lines">0</strong></div>
+          <div class="stat-row"><span>等级</span><strong id="level">1</strong></div>
+          <div class="stat-row"><span>状态</span><strong id="stateLabel">未开始</strong></div>
+        </div>
+
+        <div class="card stage-card">
+          <h2>关卡选择</h2>
+          <div class="stage-row">
+            <label for="stageSelect">起始关卡</label>
+            <select id="stageSelect" aria-label="选择起始关卡">
+              <option value="1">第 1 关（入门）</option>
+              <option value="2">第 2 关</option>
+              <option value="3">第 3 关</option>
+              <option value="4">第 4 关</option>
+              <option value="5">第 5 关</option>
+              <option value="6">第 6 关</option>
+              <option value="7">第 7 关</option>
+              <option value="8">第 8 关</option>
+              <option value="9">第 9 关</option>
+              <option value="10">第 10 关（极限）</option>
+            </select>
+          </div>
+          <p class="hint">每消除 8 行自动升 1 级，最高第 10 级。</p>
+        </div>
+
+        <div class="card actions">
+          <button id="startBtn" class="btn primary">开始游戏</button>
+          <button id="pauseBtn" class="btn">暂停</button>
+          <button id="restartBtn" class="btn">重新开始</button>
+          <button id="dropBtn" class="btn accent">掉落（空格）</button>
+        </div>
+
+        <div class="card controls">
+          <h2>触控操作</h2>
+          <div class="touch-row">
+            <button class="btn small" data-action="left">← 左移</button>
+            <button class="btn small" data-action="right">右移 →</button>
+          </div>
+          <div class="touch-row">
+            <button class="btn small" data-action="rot90">旋转 90°</button>
+            <button class="btn small" data-action="rot180">旋转 180°</button>
+            <button class="btn small" data-action="rot270">旋转 270°</button>
+          </div>
+          <div class="touch-row">
+            <button class="btn small accent" data-action="drop">掉落</button>
+          </div>
+        </div>
+
+        <div class="card help">
+          <h2>玩法说明</h2>
+          <ul>
+            <li>方块会在顶部悬空生成，先摆位和旋转，再按空格或“掉落”。</li>
+            <li>下落过程中不可再移动/旋转，碰撞后固定。</li>
+            <li>手机：点按方块旋转；长按方块后左右拖动可平移。</li>
+            <li>满行消除：单消 100、双消 300、三消 500、四消 800。</li>
+            <li>失败条件：方块堆到顶部，新的方块无法生成。</li>
+            <li>达成条件：累计 5000 分触发“胜利达成”（可继续挑战）。</li>
+          </ul>
+          <p class="hint">键盘：←/→ 移动，↑ 旋转90°，A旋转180°，Z旋转270°，空格掉落，P暂停。</p>
+        </div>
+      </aside>
+    </main>
+
+    <script src="./js/app.js"></script>
+  </body>
+  </html>

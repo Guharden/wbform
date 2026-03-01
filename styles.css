@@ -1,0 +1,231 @@
+:root {
+  --bg-1: #77a5ff;
+  --bg-2: #5f8fe9;
+  --panel: rgba(33, 56, 116, 0.36);
+  --panel-border: rgba(255, 255, 255, 0.26);
+  --text: #f6f8ff;
+  --muted: #d8e2ff;
+  --btn: rgba(255, 255, 255, 0.15);
+  --btn-hover: rgba(255, 255, 255, 0.25);
+  --btn-primary: #f1a9d5;
+  --btn-accent: #a9d7ff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: var(--text);
+  background: radial-gradient(circle at 20% 15%, #8ab4ff 0%, var(--bg-1) 40%, var(--bg-2) 100%);
+}
+
+body {
+  padding: 16px;
+}
+
+.app {
+  max-width: 1320px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(520px, 680px) minmax(240px, 420px);
+  gap: 16px;
+  align-items: start;
+}
+
+.board-wrap {
+  position: relative;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(121, 172, 255, 0.65), rgba(83, 130, 230, 0.75));
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 18px 30px rgba(32, 52, 110, 0.32);
+  overflow: hidden;
+}
+
+#gameCanvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 2;
+  touch-action: none;
+  user-select: none;
+}
+
+.status-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+  background: rgba(20, 34, 81, 0.42);
+  backdrop-filter: blur(3px);
+  color: #ffffff;
+}
+
+.status-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.side-panel {
+  display: grid;
+  gap: 10px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1.1;
+}
+
+.subtitle {
+  margin: -6px 0 4px;
+  color: var(--muted);
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  padding: 10px;
+}
+
+.card h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+#nextCanvas {
+  width: 100px;
+  height: 100px;
+  border-radius: 10px;
+  background: rgba(48, 80, 150, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  color: var(--muted);
+}
+
+.stat-row strong {
+  color: var(--text);
+}
+
+.actions,
+.controls {
+  display: grid;
+  gap: 8px;
+}
+
+.stage-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.stage-row label {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.stage-row select {
+  flex: 1;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--text);
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.stage-row select:focus {
+  outline: 2px solid rgba(255, 255, 255, 0.35);
+  outline-offset: 1px;
+}
+
+.stage-row option {
+  color: #253a73;
+}
+
+.touch-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: #fff;
+  font-weight: 600;
+  background: var(--btn);
+  transition: transform 0.12s ease, background-color 0.12s ease;
+}
+
+.btn:hover {
+  background: var(--btn-hover);
+  transform: translateY(-1px);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn.primary {
+  background: linear-gradient(180deg, #f2bae0, var(--btn-primary));
+  color: #3b2a3e;
+}
+
+.btn.accent {
+  background: linear-gradient(180deg, #bddfff, var(--btn-accent));
+  color: #20304e;
+}
+
+.btn.small {
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.help ul {
+  margin: 4px 0;
+  padding-left: 18px;
+}
+
+.help li {
+  margin: 2px 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.hint {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: #edf2ff;
+}
+
+.help {
+  max-height: 180px;
+  overflow: auto;
+}
+
+@media (max-width: 920px) {
+  .app {
+    grid-template-columns: 1fr;
+  }
+
+  .board-panel {
+    max-width: 620px;
+    width: 100%;
+    margin: 0 auto;
+  }
+}
