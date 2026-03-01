@@ -50,7 +50,7 @@ body {
   display: block;
   width: 100%;
   aspect-ratio: 1 / 2;
-  touch-action: none;
+  touch-action: pan-y;
   user-select: none;
 }
 
