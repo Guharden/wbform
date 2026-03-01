@@ -29,6 +29,7 @@
           <div class="stat-row"><span>分数</span><strong id="score">0</strong></div>
           <div class="stat-row"><span>消除行数</span><strong id="lines">0</strong></div>
           <div class="stat-row"><span>等级</span><strong id="level">1</strong></div>
+          <div class="stat-row"><span>当前方块倒计时</span><strong id="timer">--</strong></div>
           <div class="stat-row"><span>状态</span><strong id="stateLabel">未开始</strong></div>
         </div>
 
@@ -53,9 +54,9 @@
         </div>
 
         <div class="card actions">
-          <button id="startBtn" class="btn primary">开始游戏</button>
+          <button id="startBtn" class="btn primary">按所选关卡开始</button>
           <button id="pauseBtn" class="btn">暂停</button>
-          <button id="restartBtn" class="btn">重新开始</button>
+          <button id="restartBtn" class="btn">从头开始</button>
           <button id="dropBtn" class="btn accent">掉落（空格）</button>
         </div>
 
@@ -78,10 +79,11 @@
         <div class="card help">
           <h2>玩法说明</h2>
           <ul>
-            <li>新增扩展方块组（U / P / X），方块组合更丰富。</li>
+            <li>新增扩展方块组（U / P / X / V / W / Y / F / N），方块组合更丰富。</li>
             <li>方块会在顶部悬空生成，先摆位和旋转，再按空格或“掉落”。</li>
+            <li>每个方块组有 15s 倒计时，超时会自动下落。</li>
             <li>下落过程中不可再移动/旋转，碰撞后固定。</li>
-            <li>手机：点按方块旋转；长按并向下比划可显示落点预览，左右拖动可调整预览位置。</li>
+            <li>手机：按住方块向下拖即可直接显示落点预览，左右滑动可同步微调位置。</li>
             <li>满行消除：单消 100、双消 300、三消 500、四消 800。</li>
             <li>失败条件：方块堆到顶部，新的方块无法生成。</li>
             <li>达成条件：累计 5000 分触发“胜利达成”（可继续挑战）。</li>
