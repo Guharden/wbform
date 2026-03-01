@@ -1,6 +1,6 @@
 (() => {
-  const BOARD_COLS = 10;
-  const BOARD_ROWS = 20;
+  const BOARD_COLS = 12;
+  const BOARD_ROWS = 16;
 
   const SCORE_TABLE = {
     1: 100,
@@ -19,6 +19,9 @@
     J: "#c5d0ff",
     S: "#c3f1dc",
     Z: "#ffbcc3",
+    U: "#aee5ff",
+    P: "#ffd8b0",
+    X: "#d7ffbf",
   };
 
   const DROP_CONFIG = {
@@ -72,6 +75,27 @@
       [1, 0],
       [1, 1],
       [2, 1],
+    ],
+    U: [
+      [0, 0],
+      [2, 0],
+      [0, 1],
+      [1, 1],
+      [2, 1],
+    ],
+    P: [
+      [1, 0],
+      [2, 0],
+      [1, 1],
+      [2, 1],
+      [1, 2],
+    ],
+    X: [
+      [1, 0],
+      [0, 1],
+      [1, 1],
+      [2, 1],
+      [1, 2],
     ],
   };
 
@@ -128,6 +152,7 @@
     reset() {
       this.board = createEmptyBoard();
       this.activePiece = null;
+      this.dropPreviewPiece = null;
       this.nextType = randomPieceType();
 
       this.isStarted = false;
@@ -174,6 +199,9 @@
         return false;
       }
       this.activePiece = candidate;
+      if (this.dropPreviewPiece) {
+        this.updateDropPreview();
+      }
       this.controlFeedbackMs = CONTROL_FEEDBACK_MS;
       return true;
     }
@@ -193,6 +221,9 @@
         };
         if (!this.collides(candidate)) {
           this.activePiece = candidate;
+          if (this.dropPreviewPiece) {
+            this.updateDropPreview();
+          }
           this.controlFeedbackMs = CONTROL_FEEDBACK_MS;
           return true;
         }
@@ -205,9 +236,10 @@
         return false;
       }
 
-      let candidate = { ...this.activePiece };
-      while (!this.collides({ ...candidate, y: candidate.y + 1 })) {
-        candidate.y += 1;
+      this.clearDropPreview();
+      const candidate = this.getLandingPiece(this.activePiece);
+      if (!candidate) {
+        return false;
       }
 
       const fallDistance = candidate.y - this.activePiece.y;
@@ -265,6 +297,37 @@
       return cells.map(([x, y]) => ({ x: piece.x + x, y: piece.y + y }));
     }
 
+    getLandingPiece(piece) {
+      if (!piece) {
+        return null;
+      }
+
+      const landing = {
+        ...piece,
+        y: Math.round(piece.y),
+      };
+
+      while (!this.collides({ ...landing, y: landing.y + 1 })) {
+        landing.y += 1;
+      }
+
+      return landing;
+    }
+
+    updateDropPreview() {
+      if (!this.canControl() || !this.activePiece) {
+        this.dropPreviewPiece = null;
+        return false;
+      }
+
+      this.dropPreviewPiece = this.getLandingPiece(this.activePiece);
+      return Boolean(this.dropPreviewPiece);
+    }
+
+    clearDropPreview() {
+      this.dropPreviewPiece = null;
+    }
+
     canControl() {
       return (
         this.isStarted &&
@@ -299,6 +362,7 @@
       }
 
       this.activePiece = null;
+      this.clearDropPreview();
       this.isDropping = false;
       this.dropMotion = null;
 
@@ -364,6 +428,7 @@
 
       if (this.collides(this.activePiece)) {
         this.activePiece = null;
+        this.clearDropPreview();
         this.isGameOver = true;
         this.isDropping = false;
       }
@@ -556,6 +621,7 @@
       this.drawBoardBackground();
       this.drawGrid();
       this.drawSettledBlocks();
+      this.drawDropPreview();
       this.drawActivePiece();
       this.drawShatterParticles();
 
@@ -675,6 +741,30 @@
       }
     }
 
+    drawDropPreview() {
+      const previewPiece = this.game.dropPreviewPiece;
+      const activePiece = this.game.activePiece;
+      if (!previewPiece || !activePiece || this.game.isDropping || this.game.clearAnimation) {
+        return;
+      }
+
+      if (
+        Math.round(previewPiece.x) === Math.round(activePiece.x) &&
+        Math.round(previewPiece.y) === Math.round(activePiece.y) &&
+        previewPiece.rotation === activePiece.rotation
+      ) {
+        return;
+      }
+
+      const cells = getPieceCells(previewPiece.type, previewPiece.rotation);
+      const color = this.getPieceColor(previewPiece.type);
+      for (const [x, y] of cells) {
+        const boardX = Math.round(previewPiece.x + x);
+        const boardY = Math.round(previewPiece.y + y);
+        this.drawGhostBlock(boardX, boardY, color);
+      }
+    }
+
     drawShatterParticles() {
       const animation = this.game.clearAnimation;
       if (!animation) {
@@ -744,6 +834,32 @@
 
       this.ctx.lineWidth = 1;
       this.ctx.strokeStyle = "rgba(255,255,255,0.25)";
+      this.roundRect(x + inset, y + inset, size - inset * 2, size - inset * 2, radius);
+      this.ctx.stroke();
+      this.ctx.restore();
+    }
+
+    drawGhostBlock(gridX, gridY, color) {
+      const x = gridX * this.cellSize;
+      const y = gridY * this.cellSize;
+      if (y < 0 || y >= this.boardHeight) {
+        return;
+      }
+
+      const size = this.cellSize;
+      const inset = Math.max(1, Math.floor(size * 0.11));
+      const radius = Math.max(3, Math.floor(size * 0.16));
+
+      this.ctx.save();
+      this.ctx.globalAlpha = 0.32;
+      this.roundRect(x + inset, y + inset, size - inset * 2, size - inset * 2, radius);
+      this.ctx.fillStyle = color;
+      this.ctx.fill();
+
+      this.ctx.globalAlpha = 0.78;
+      this.ctx.setLineDash([Math.max(3, size * 0.18), Math.max(2, size * 0.12)]);
+      this.ctx.lineWidth = Math.max(1, size * 0.06);
+      this.ctx.strokeStyle = "rgba(255,255,255,0.9)";
       this.roundRect(x + inset, y + inset, size - inset * 2, size - inset * 2, radius);
       this.ctx.stroke();
       this.ctx.restore();
@@ -886,6 +1002,7 @@
 
     bindCanvasTouch(canvas, renderer) {
       const clearState = () => {
+        this.game.clearDropPreview();
         this.canvasTouchState = null;
       };
 
@@ -898,10 +1015,14 @@
         clearState();
 
         if (!this.game.canControl()) {
+          this.game.clearDropPreview();
           return;
         }
 
         if (snapshot.startedOnPiece) {
+          if (snapshot.previewDrop) {
+            return;
+          }
           if (!snapshot.dragging && !snapshot.hasMoved) {
             this.game.rotate(1);
           }
@@ -927,6 +1048,7 @@
           dragging: false,
           startedOnPiece,
           dragAccumulator: 0,
+          previewDrop: false,
         };
 
         this.canvasTouchState = state;
@@ -952,6 +1074,11 @@
           return;
         }
 
+        if (!state.previewDrop && totalDy >= Math.max(14, renderer.cellSize * 0.62)) {
+          state.previewDrop = true;
+          this.game.updateDropPreview();
+        }
+
         if (Math.abs(totalDx) >= 6) {
           state.dragging = true;
         }
@@ -969,6 +1096,10 @@
         while (state.dragAccumulator <= -0.45) {
           this.game.move(-1);
           state.dragAccumulator += 1;
+        }
+
+        if (state.previewDrop) {
+          this.game.updateDropPreview();
         }
       });
 
