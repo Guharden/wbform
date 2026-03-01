@@ -50,7 +50,7 @@ body {
   display: block;
   width: 100%;
   aspect-ratio: 3 / 4;
-  touch-action: pan-y;
+  touch-action: none;
   user-select: none;
 }
 
@@ -70,6 +70,36 @@ body {
 .status-overlay.hidden {
   opacity: 0;
   pointer-events: none;
+}
+
+.overlay-link {
+  border: none;
+  background: transparent;
+  color: #ffffff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-size: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 0;
+}
+
+.overlay-stack {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  padding: 8px;
+}
+
+.overlay-stack p {
+  margin: 0;
+}
+
+.overlay-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
 }
 
 .side-panel {
