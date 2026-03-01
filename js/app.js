@@ -886,9 +886,6 @@
 
     bindCanvasTouch(canvas, renderer) {
       const clearState = () => {
-        if (this.canvasTouchState?.timerId) {
-          clearTimeout(this.canvasTouchState.timerId);
-        }
         this.canvasTouchState = null;
       };
 
@@ -900,40 +897,39 @@
         const snapshot = this.canvasTouchState;
         clearState();
 
-        if (!snapshot.longPressActivated && !snapshot.hasMoved && this.game.canControl()) {
-          this.game.rotate(1);
+        if (!this.game.canControl()) {
+          return;
         }
 
-        if (canvas.hasPointerCapture(event.pointerId)) {
-          canvas.releasePointerCapture(event.pointerId);
+        if (snapshot.startedOnPiece) {
+          if (!snapshot.dragging && !snapshot.hasMoved) {
+            this.game.rotate(1);
+          }
+        } else if (!snapshot.hasMoved) {
+          this.game.triggerDrop();
         }
       };
 
       canvas.addEventListener("pointerdown", (event) => {
-        if (!this.game.canControl() || !this.isOnActivePiece(event, renderer)) {
+        if ((event.pointerType === "mouse" && event.button !== 0) || !this.game.canControl()) {
           return;
         }
 
-        event.preventDefault();
+        const startedOnPiece = this.isOnActivePiece(event, renderer);
+
         const state = {
           pointerId: event.pointerId,
           startX: event.clientX,
           startY: event.clientY,
           lastX: event.clientX,
+          lastY: event.clientY,
           hasMoved: false,
-          longPressActivated: false,
+          dragging: false,
+          startedOnPiece,
           dragAccumulator: 0,
-          timerId: null,
         };
 
-        state.timerId = window.setTimeout(() => {
-          if (this.canvasTouchState && this.canvasTouchState.pointerId === event.pointerId) {
-            this.canvasTouchState.longPressActivated = true;
-          }
-        }, 220);
-
         this.canvasTouchState = state;
-        canvas.setPointerCapture(event.pointerId);
       });
 
       canvas.addEventListener("pointermove", (event) => {
@@ -948,20 +944,29 @@
           state.hasMoved = true;
         }
 
-        if (!state.longPressActivated || !this.game.canControl()) {
-          state.lastX = event.clientX;
+        const dx = event.clientX - state.lastX;
+        state.lastX = event.clientX;
+        state.lastY = event.clientY;
+
+        if (!state.startedOnPiece || !this.game.canControl()) {
           return;
         }
 
-        const dx = event.clientX - state.lastX;
-        state.lastX = event.clientX;
+        if (Math.abs(totalDx) >= 6) {
+          state.dragging = true;
+        }
+
+        if (!state.dragging) {
+          return;
+        }
+
         state.dragAccumulator += dx / Math.max(1, renderer.cellSize);
 
-        while (state.dragAccumulator >= 0.65) {
+        while (state.dragAccumulator >= 0.45) {
           this.game.move(1);
           state.dragAccumulator -= 1;
         }
-        while (state.dragAccumulator <= -0.65) {
+        while (state.dragAccumulator <= -0.45) {
           this.game.move(-1);
           state.dragAccumulator += 1;
         }
@@ -974,8 +979,10 @@
         if (!state || event.pointerId !== state.pointerId) {
           return;
         }
-        if (state.longPressActivated) {
+        if (state.dragging) {
           finishTapOrDrag(event);
+        } else {
+          clearState();
         }
       });
     }
