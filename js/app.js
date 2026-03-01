@@ -32,6 +32,7 @@
 
   const CLEAR_ANIMATION_MS = 260;
   const CONTROL_FEEDBACK_MS = 130;
+  const PIECE_PREP_MS = 15000;
 
   const PIECES = {
     I: [
@@ -97,7 +98,50 @@
       [2, 1],
       [1, 2],
     ],
+    V: [
+      [0, 0],
+      [0, 1],
+      [0, 2],
+      [1, 2],
+      [2, 2],
+    ],
+    W: [
+      [0, 0],
+      [0, 1],
+      [1, 1],
+      [1, 2],
+      [2, 2],
+    ],
+    Y: [
+      [1, 0],
+      [0, 1],
+      [1, 1],
+      [1, 2],
+      [1, 3],
+    ],
+    F: [
+      [1, 0],
+      [0, 1],
+      [1, 1],
+      [1, 2],
+      [2, 2],
+    ],
+    N: [
+      [0, 0],
+      [1, 0],
+      [1, 1],
+      [2, 1],
+      [2, 2],
+    ],
   };
+
+  Object.assign(PIECE_COLORS, {
+    V: "#cbe7ff",
+    W: "#ffc9dc",
+    Y: "#d8ccff",
+    F: "#ffd4ad",
+    N: "#bfeedd",
+  });
 
   const PIECE_TYPES = Object.keys(PIECES);
 
@@ -134,6 +178,15 @@
     return board.map((row) => row.slice());
   }
 
+  function randomInt(min, max) {
+    return min + Math.floor(Math.random() * (max - min + 1));
+  }
+
+  function randomBlockColor() {
+    const colorKeys = Object.keys(PIECE_COLORS);
+    return PIECE_COLORS[colorKeys[randomInt(0, colorKeys.length - 1)]];
+  }
+
   class TetrisGame {
     constructor() {
       this.startLevel = 1;
@@ -153,6 +206,8 @@
       this.board = createEmptyBoard();
       this.activePiece = null;
       this.dropPreviewPiece = null;
+      this.pieceCountdownMs = PIECE_PREP_MS;
+      this.pendingGarbageRows = 0;
       this.nextType = randomPieceType();
 
       this.isStarted = false;
@@ -176,6 +231,7 @@
       }
       this.reset();
       this.isStarted = true;
+      this.seedBottomBlocksForLevel(this.level);
       this.spawnPiece();
     }
 
@@ -276,6 +332,13 @@
         this.updateClearAnimation(dtMs);
       }
 
+      if (this.canControl()) {
+        this.pieceCountdownMs = Math.max(0, this.pieceCountdownMs - dtMs);
+        if (this.pieceCountdownMs === 0) {
+          this.triggerDrop();
+        }
+      }
+
       if (this.isDropping && this.activePiece && this.dropMotion) {
         const nextY = this.dropMotion.currentY + (this.dropMotion.speed * dtMs) / 1000;
         this.dropMotion.currentY = Math.min(this.dropMotion.targetY, nextY);
@@ -365,6 +428,7 @@
       this.clearDropPreview();
       this.isDropping = false;
       this.dropMotion = null;
+      this.pieceCountdownMs = PIECE_PREP_MS;
 
       const fullRows = this.findFullRows();
       if (fullRows.length > 0) {
@@ -379,8 +443,14 @@
     applyScore(clearedCount) {
       this.score += SCORE_TABLE[clearedCount] || 0;
       this.lines += clearedCount;
+      const oldLevel = this.level;
       const growth = Math.floor(this.lines / 8);
       this.level = Math.min(this.maxLevel, this.startLevel + growth);
+
+      if (this.level > oldLevel) {
+        this.pendingGarbageRows += this.getSeedRowsForLevel(this.level);
+      }
+
       if (!this.victoryAchieved && this.score >= VICTORY_SCORE) {
         this.victoryAchieved = true;
       }
@@ -412,6 +482,7 @@
       if (progress >= 1) {
         this.board = this.clearAnimation.finalBoard;
         this.clearAnimation = null;
+        this.applyPendingGarbageRows();
         this.spawnPiece();
       }
     }
@@ -425,6 +496,7 @@
         x: Math.floor((BOARD_COLS - 4) / 2),
         y: 0,
       };
+      this.pieceCountdownMs = PIECE_PREP_MS;
 
       if (this.collides(this.activePiece)) {
         this.activePiece = null;
@@ -432,6 +504,46 @@
         this.isGameOver = true;
         this.isDropping = false;
       }
+    }
+
+    getSeedRowsForLevel(level) {
+      return Math.min(4, 1 + Math.floor((level - 1) / 3));
+    }
+
+    buildGarbageRow() {
+      const row = Array(BOARD_COLS).fill(null);
+      const holes = new Set();
+      const holeCount = randomInt(2, 3);
+      while (holes.size < holeCount) {
+        holes.add(randomInt(0, BOARD_COLS - 1));
+      }
+
+      for (let x = 0; x < BOARD_COLS; x += 1) {
+        if (!holes.has(x)) {
+          row[x] = randomBlockColor();
+        }
+      }
+      return row;
+    }
+
+    seedBottomBlocksForLevel(level) {
+      const rows = this.getSeedRowsForLevel(level);
+      for (let y = BOARD_ROWS - rows; y < BOARD_ROWS; y += 1) {
+        this.board[y] = this.buildGarbageRow();
+      }
+    }
+
+    applyPendingGarbageRows() {
+      if (this.pendingGarbageRows <= 0) {
+        return;
+      }
+
+      for (let i = 0; i < this.pendingGarbageRows; i += 1) {
+        this.board.shift();
+        this.board.push(this.buildGarbageRow());
+      }
+
+      this.pendingGarbageRows = 0;
     }
 
     findFullRows() {
@@ -1011,6 +1123,10 @@
           return;
         }
 
+        if (canvas.hasPointerCapture(event.pointerId)) {
+          canvas.releasePointerCapture(event.pointerId);
+        }
+
         const snapshot = this.canvasTouchState;
         clearState();
 
@@ -1035,6 +1151,8 @@
         if ((event.pointerType === "mouse" && event.button !== 0) || !this.game.canControl()) {
           return;
         }
+
+        canvas.setPointerCapture(event.pointerId);
 
         const startedOnPiece = this.isOnActivePiece(event, renderer);
 
@@ -1074,12 +1192,16 @@
           return;
         }
 
-        if (!state.previewDrop && totalDy >= Math.max(14, renderer.cellSize * 0.62)) {
+        if (
+          !state.previewDrop &&
+          totalDy >= Math.max(8, renderer.cellSize * 0.24) &&
+          totalDy >= Math.abs(totalDx) * 0.4
+        ) {
           state.previewDrop = true;
           this.game.updateDropPreview();
         }
 
-        if (Math.abs(totalDx) >= 6) {
+        if (Math.abs(totalDx) >= 3) {
           state.dragging = true;
         }
 
@@ -1089,11 +1211,11 @@
 
         state.dragAccumulator += dx / Math.max(1, renderer.cellSize);
 
-        while (state.dragAccumulator >= 0.45) {
+        while (state.dragAccumulator >= 0.28) {
           this.game.move(1);
           state.dragAccumulator -= 1;
         }
-        while (state.dragAccumulator <= -0.45) {
+        while (state.dragAccumulator <= -0.28) {
           this.game.move(-1);
           state.dragAccumulator += 1;
         }
@@ -1149,6 +1271,7 @@
   const scoreEl = document.getElementById("score");
   const linesEl = document.getElementById("lines");
   const levelEl = document.getElementById("level");
+  const timerEl = document.getElementById("timer");
   const stateLabelEl = document.getElementById("stateLabel");
   const statusOverlay = document.getElementById("statusOverlay");
 
@@ -1165,6 +1288,7 @@
   const game = new TetrisGame();
   const renderer = new Renderer(gameCanvas, nextCanvas, game);
   const input = new InputController(game);
+  let startChoiceOpen = false;
 
   input.bindKeyboard();
   input.bindTouchButtons(document.body);
@@ -1177,36 +1301,90 @@
   });
 
   startBtn.addEventListener("click", () => {
+    startChoiceOpen = false;
     game.setStartLevel(Number(stageSelect.value));
     game.start();
   });
   pauseBtn.addEventListener("click", () => game.togglePause());
   restartBtn.addEventListener("click", () => {
-    game.setStartLevel(Number(stageSelect.value));
+    startChoiceOpen = false;
+    stageSelect.value = "1";
+    game.setStartLevel(1);
     game.restart();
   });
   dropBtn.addEventListener("click", () => game.triggerDrop());
 
+  statusOverlay.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+
+    const action = target.dataset.overlayAction;
+    if (!action) {
+      return;
+    }
+
+    if (action === "open-start-choice") {
+      startChoiceOpen = true;
+      updateOverlay();
+      return;
+    }
+
+    if (action === "start-fresh") {
+      startChoiceOpen = false;
+      stageSelect.value = "1";
+      game.setStartLevel(1);
+      game.start();
+      return;
+    }
+
+    if (action === "start-stage") {
+      startChoiceOpen = false;
+      game.setStartLevel(Number(stageSelect.value));
+      game.start();
+      return;
+    }
+
+    if (action === "close-start-choice") {
+      startChoiceOpen = false;
+      updateOverlay();
+    }
+  });
+
   let lastTime = performance.now();
 
   function updateOverlay() {
-    let message = "";
+    let html = "";
 
     if (!game.isStarted) {
-      message = "点击【开始游戏】后，先摆位再掉落";
+      if (startChoiceOpen) {
+        html = `
+          <div class="overlay-stack">
+            <p>请选择开局方式</p>
+            <div class="overlay-actions">
+              <button class="btn small primary" data-overlay-action="start-fresh">从头开始</button>
+              <button class="btn small accent" data-overlay-action="start-stage">按所选关卡开始</button>
+            </div>
+            <button class="btn small" data-overlay-action="close-start-choice">返回</button>
+          </div>
+        `;
+      } else {
+        html = `点击“<button class="overlay-link" data-overlay-action="open-start-choice">开始游戏</button>”后，先摆位再掉落`;
+      }
     } else if (game.isGameOver) {
-      message = "游戏结束：堆叠触顶，无法生成新方块";
+      html = "游戏结束：堆叠触顶，无法生成新方块";
     } else if (game.isPaused) {
-      message = "已暂停";
+      html = "已暂停";
     } else if (game.victoryAchieved) {
-      message = "胜利达成：5000 分！可继续挑战";
+      html = "胜利达成：5000 分！可继续挑战";
     }
 
-    if (message) {
-      statusOverlay.textContent = message;
+    if (html) {
+      statusOverlay.innerHTML = html;
       statusOverlay.classList.remove("hidden");
     } else {
-      statusOverlay.textContent = "";
+      statusOverlay.innerHTML = "";
       statusOverlay.classList.add("hidden");
     }
   }
@@ -1227,13 +1405,17 @@
     if (game.isDropping) {
       return "下落中";
     }
-    return "预摆中";
+    const seconds = (game.pieceCountdownMs / 1000).toFixed(1);
+    return `预摆中（${seconds}s）`;
   }
 
   function updateUI() {
     scoreEl.textContent = String(game.score);
     linesEl.textContent = String(game.lines);
     levelEl.textContent = String(game.level);
+    if (timerEl) {
+      timerEl.textContent = game.canControl() ? `${(game.pieceCountdownMs / 1000).toFixed(1)}s` : "--";
+    }
     stateLabelEl.textContent = resolveStateLabel();
 
     pauseBtn.disabled = !game.isStarted || game.isGameOver;
